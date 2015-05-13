@@ -13,11 +13,11 @@ function charLenToPixWidth(integer) {
 };
 function charsToPixHeight(string) {
 	var pixelWidth = $(".fdsa").height();
-	return string.length * pixelWidth;
+	return string.length * pixelWidth+integer+1;
 };
 function charLenToPixHeight(integer) {
 	var pixelWidth = $(".fdsa").height();
-	return integer * pixelWidth;
+	return integer * pixelWidth+integer+1;
 };
 function numberWithCommas(x) {
     var parts = x.toString().split(".");
@@ -59,54 +59,57 @@ function kcLolis() {
 	this.interactables = {};
 
 	//Art loaded from asciiScreens.js
-	this.ascii.main = asciiMainSkeleton;
+	this.ascii.navbar = asciiNavbar;
+	this.ascii.shop = asciiShop;
+	this.ascii.base = asciiBase;
 
 	//Applies to all "frames" of the ascii contained within
-	this.ascii.colCount = this.ascii.main[0].length;
-	this.ascii.rowCount = this.ascii.main.length;
-	this.interactables.main = {
+	this.ascii.colCount = this.ascii.navbar[0].length;
+	this.ascii.rowCount = this.ascii.navbar.length+this.ascii.base.length;
+	this.interactables.navbar = {
 		"menuButton" : {
-			"html":["////////","/ Menu /","////////"],
-			"x":3, "y":2,
-			"width":8, "height":3,
-			"callback":"lolis.mainMenu()",
+			"html":["//////////","// Base //","//////////"],
+			"x":4, "y":2,
+			"width":10, "height":3,
+			"callback":"lolis.mainBase()",
 			"classes":["elem-div"],
 			"unlocked":true
 		}, "shopButton" : {
-			"html":["////////","/ Shop /","////////"],
-			"x":14, "y":2,
-			"width":8, "height":3,
+			"html":["//////////","// Shop //","//////////"],
+			"x":19, "y":2,
+			"width":10, "height":3,
 			"callback":"lolis.mainShop()",
 			"classes":["elem-div"],
 			"unlocked":true
 		}, "sortieButton" : {
-			"html":["//////////","/ Sortie /","//////////"],
-			"x":25, "y":2,
-			"width":10, "height":3,
-			"callback":"lolis.mainSortie()",
-			"classes":["elem-div"],
-			"unlocked":true
-		}, "mapButton" : {
-			"html":["///////","/ Map /","///////"],
-			"x":38, "y":2,
-			"width":7, "height":3,
-			"callback":"lolis.mainMap()",
-			"classes":["elem-div"],
-			"unlocked":true
-		}, "farmButton" : {
-			"html":["////////","/ Farm /","////////"],
-			"x":48, "y":2,
-			"width":8, "height":3,
+			"html":["////////////","//  Farm  //","////////////"],
+			"x":34, "y":2,
+			"width":12, "height":3,
 			"callback":"lolis.mainFarm()",
 			"classes":["elem-div"],
-			"unlocked":true
+			"unlocked":false
+		}, "mapButton" : {
+			"html":["/////////","// Map //","/////////"],
+			"x":51, "y":2,
+			"width":9, "height":3,
+			"callback":"lolis.mainMap()",
+			"classes":["elem-div"],
+			"unlocked":false
+		}, "farmButton" : {
+			"html":["//////////","// Menu //","//////////"],
+			"x":65, "y":2,
+			"width":10, "height":3,
+			"callback":"lolis.mainMenu()",
+			"classes":["elem-div"],
+			"unlocked":false
 		}
 	};
 	this.currentFrame = {};
 	// main, shop, map, farm, menu
-	this.currentFrame.screen = "main";
-	this.currentFrame.interactables = this.interactables.main;
-	this.currentFrame.ascii = this.ascii.main;
+	this.currentFrame.screen = "base";
+	this.currentFrame.interactables = [this.interactables.navbar];
+	this.currentFrame.ascii = this.ascii.base;
+	this.currentFrame.asciinavbar = this.ascii.navbar;
 	this.currentFrame.render = [];
 	// game.currentFrame.changed should only indicate scene changes
 	// eg, going from different menus to other menus, different maps, etc. Drastic changes.
@@ -164,6 +167,7 @@ function kcLolis() {
 	// clear render
 	this.clear = function(){
 		$(".elem-div").remove();
+		$(".game_area").empty();
 		game.currentFrame.render = [];
 		game.returnClickableHTMLOffset = 0;
 	};
@@ -172,36 +176,40 @@ function kcLolis() {
 		if (game.currentFrame.changed) {
 			// Clear everything
 			game.clear();
+			game.currentFrame.asciinavbar.forEach(function (data) {
+				game.currentFrame.render.push(data);
+			});
 
 			game.currentFrame.ascii.forEach(function (data) {
 				game.currentFrame.render.push(data);
 			});
-			for (var button in game.currentFrame.interactables) {
-				if (game.currentFrame.interactables.hasOwnProperty(button)){
-					var i = 0;
-					var data = game.currentFrame.interactables[button];
-					for (var buttonLine in data.html) {
-						var line = game.currentFrame.render[data.y+i];
-						if (typeof(line) === "string"){
-							var newline = game.returnClickableHTML(line,data.html[buttonLine],data)
-							game.currentFrame.render[data.y+i] = newline
+			game.currentFrame.interactables.forEach(function (data){
+				for (var button in data) {
+					console.log(button);
+					if (data.hasOwnProperty(button)){
+						var i = 0;
+						var info = data[button];
+						for (var buttonLine in info.html) {
+							var line = game.currentFrame.render[info.y+i];
+							if (typeof(line) === "string"){
+								var newline = game.returnClickableHTML(line,info.html[buttonLine],info)
+								game.currentFrame.render[info.y+i] = newline
+							};
+							i++;
 						};
-						i++;
+						game.returnClickableHTMLOffset += game.returnClickableHTMLOffsetToAdd;
 					};
-					game.returnClickableHTMLOffset += game.returnClickableHTMLOffsetToAdd;
 				};
-			};
+			});
 			game.currentFrame.render.forEach(function (data){
 				$(".game_area").append(data).append("<br>");
 			});
 			game.currentFrame.changed = false;
 		};
-		if (game.currentFrame.screen === "main"){
-			$("#fuel_count").html(game.renderRescString(game.stats.fuel));
-			$("#ammo_count").html(game.renderRescString(game.stats.ammo));
-			$("#steel_count").html(game.renderRescString(game.stats.steel));
-			$("#bauxite_count").html(game.renderRescString(Math.floor(game.stats.bauxite)));
-		};
+		$("#fuel_count").html(game.renderRescString(game.stats.fuel));
+		$("#ammo_count").html(game.renderRescString(game.stats.ammo));
+		$("#steel_count").html(game.renderRescString(game.stats.steel));
+		$("#bauxite_count").html(game.renderRescString(Math.floor(game.stats.bauxite)));
 	};
 
 	this.save = function() {
@@ -217,13 +225,10 @@ function kcLolis() {
 	this.load = function() {
 		var cookie = getCookie("kcLolisInfo");
 		var valArray = cookie.split("|");
-		console.log(valArray);
 		valArray.forEach(function (data) {
-			console.log(data);
 			var split = data.split(":");
 			var key = split[0];
 			var val = split[1];
-			//console.log(key+" "+val);
 			if (key == "fuel"){game.stats.fuel = Number(val)}
 			else if(key == "ammo"){game.stats.ammo = Number(val)}
 			else if(key == "steel"){game.stats.steel = Number(val)}
@@ -260,6 +265,19 @@ function kcLolis() {
 		var pad = "                       "
 		return pad.substring(0,pad.length-val.length)+val
 	};
+
+	this.mainShop = function(){
+		game.currentFrame.screen = "shop";
+		game.currentFrame.ascii = game.ascii.shop;
+		game.currentFrame.interactables = [game.interactables.navbar,game.interactables.shop];
+		this.currentFrame.changed = true;
+	};
+	this.mainBase = function(){
+		game.currentFrame.screen = "base";
+		game.currentFrame.ascii = game.ascii.base;
+		game.currentFrame.interactable = [game.interactables.navbar]
+		this.currentFrame.changed = true;
+	};
 };
 
 
@@ -274,11 +292,10 @@ $(document).ready(function () {
 
 	var $gameArea = $(".game_area");
 	$gameArea.css({
-		"width":charLenToPixWidth(lolis.ascii.colCount).toString(),
-		"height":charLenToPixHeight(lolis.ascii.rowCount).toString(),
 		"font-family":"monospace",
 		"font-size":"11px",
-		"background":"red"
+		"color":"#00D316",
+		"background":"black"
 	});
 	lolis.start();
 });
